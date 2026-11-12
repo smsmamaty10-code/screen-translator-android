@@ -1,8 +1,10 @@
-name: Build Signed APK and AAB
+name: Build v4 Lens APK and AAB
 
 on:
   push:
     branches: [ "main", "master" ]
+    paths:
+      - '.github/workflows/build.yml'
   workflow_dispatch:
 
 permissions:
@@ -26,30 +28,32 @@ jobs:
         with:
           gradle-version: '8.5'
 
-      - name: Build v3.0 Google-Lens-Style In-Place Screen Translator APK & AAB
+      - name: Build v4.0 Lens-Style Screen Translator APK & AAB
         run: |
           gradle assembleRelease bundleRelease --stacktrace
-          cp app/build/outputs/apk/release/*.apk ScreenTranslator-v3.apk
-          cp app/build/outputs/bundle/release/*.aab ScreenTranslator-v3.aab
+          cp app/build/outputs/apk/release/*.apk ScreenTranslator-Lens-v4.apk
+          cp app/build/outputs/bundle/release/*.aab ScreenTranslator-Lens-v4.aab
 
-      - name: Publish Direct Download Release (APK & AAB)
+      - name: Publish Direct Download Release (v4.0)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.0-latest
-          name: "مترجم الشاشة الفوري v3.0 (ترجمة موضعية مثل عدسة جوجل + زر عائم مصغر)"
-          body: "الإصدار 3.0: زر عائم دائري صغير جداً + ترجمة النصوص مباشرة في نفس أماكنها فوق الشاشة مثل Google Lens تماماً."
+          tag_name: v4.0-lens
+          name: "عدسة مترجم الشاشة الفوري v4.0 (ترجمة موضعية + زر صغير 36dp)"
+          body: "الإصدار الرابع v4.0: زر دائري مصغر (36dp) وترجمة فورية في نفس مكان كل كلمة مثل عدسة جوجل."
           files: |
-            ScreenTranslator-v3.apk
-            ScreenTranslator-v3.aab
+            ScreenTranslator-Lens-v4.apk
+            ScreenTranslator-Lens-v4.aab
 
-      - name: Upload Signed APK Artifact
+      - name: Upload v4 Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenTranslator-v3-Signed-APK
-          path: ScreenTranslator-v3.apk
+          name: ScreenTranslator-Lens-v4-APK
+          path: ScreenTranslator-Lens-v4.apk
 
-      - name: Upload Signed AAB Artifact
+      - name: Upload v4 Signed AAB Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenTranslator-v3-Signed-AAB
-          path: ScreenTranslator-v3.aab
+          name: ScreenTranslator-Lens-v4-AAB
+          path: ScreenTranslator-Lens-v4.aab
+
+# Build timestamp: 2026-11-12T16:31:32.280Z
