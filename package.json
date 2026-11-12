@@ -1,0 +1,21 @@
+{
+  "name": "screen-translator-capacitor",
+  "version": "1.0.0",
+  "description": "Screen Translator App built with HTML/CSS/JS + Capacitor + AdMob + Gradle R8 Mapping + Keystore + Playwright",
+  "main": "www/index.html",
+  "scripts": {
+    "sync": "npx cap sync android",
+    "build:apk": "cd android && ./gradlew assembleRelease",
+    "build:aab": "cd android && ./gradlew bundleRelease",
+    "test:screenshots": "npx playwright test tests/playwright_store_screenshots.spec.js"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor-community/admob": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@playwright/test": "^1.44.0"
+  }
+}
