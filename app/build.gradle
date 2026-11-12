@@ -1,14 +1,5 @@
-import java.util.Properties
-import java.io.FileInputStream
-
 plugins {
     id 'com.android.application'
-}
-
-def keystorePropertiesFile = rootProject.file("keystore/keystore.properties")
-def keystoreProperties = new Properties()
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -23,26 +14,21 @@ android {
         versionName "1.0.0"
     }
 
-    // الخطوة 5: التوقيع بمفتاح الـ Keystore الثابت لتحديث التطبيق بدون مشاكل
     signingConfigs {
         release {
-            storeFile file(keystoreProperties.getProperty('storeFile', '../keystore/screen-translator-release.jks'))
-            storePassword keystoreProperties.getProperty('storePassword', 'ScreenTrans2026!')
-            keyAlias keystoreProperties.getProperty('keyAlias', 'screentranslator_key')
-            keyPassword keystoreProperties.getProperty('keyPassword', 'ScreenTrans2026!')
+            storeFile rootProject.file("keystore/screen-translator-release.jks")
+            storePassword "ScreenTrans2026!"
+            keyAlias "screentranslator_key"
+            keyPassword "ScreenTrans2026!"
         }
     }
 
-    // الخطوة 4: ضغط الكود عبر R8/ProGuard وتضمين ملف الـ mapping تلقائياً داخل الـ AAB
     buildTypes {
         release {
             signingConfig signingConfigs.release
             minifyEnabled true
-            shrinkResources true
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            ndk {
-                debugSymbolLevel 'FULL'
-            }
         }
         debug {
             signingConfig signingConfigs.release
@@ -57,8 +43,4 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.webkit:webkit:1.10.0'
-    // الخطوة 3: مكتبة إعلانات Google AdMob الرسمية
-    implementation 'com.google.android.gms:play-services-ads:23.0.0'
 }
