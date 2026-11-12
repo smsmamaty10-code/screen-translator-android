@@ -26,30 +26,30 @@ jobs:
         with:
           gradle-version: '8.5'
 
-      - name: Build v2.0 Signed APK & Signed AAB (With Custom Adaptive Icon)
+      - name: Build v3.0 Google-Lens-Style In-Place Screen Translator APK & AAB
         run: |
           gradle assembleRelease bundleRelease --stacktrace
-          cp app/build/outputs/apk/release/*.apk ScreenTranslator-v2.apk
-          cp app/build/outputs/bundle/release/*.aab ScreenTranslator-v2.aab
+          cp app/build/outputs/apk/release/*.apk ScreenTranslator-v3.apk
+          cp app/build/outputs/bundle/release/*.aab ScreenTranslator-v3.aab
 
       - name: Publish Direct Download Release (APK & AAB)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0-latest
-          name: "مترجم الشاشة الفوري v2.0 (مع الأيقونة الجديدة والزر العائم)"
-          body: "الإصدار 2.0 المزود بالأيقونة الزجاجية الجديدة والزر العائم لترجمة الشاشة."
+          tag_name: v3.0-latest
+          name: "مترجم الشاشة الفوري v3.0 (ترجمة موضعية مثل عدسة جوجل + زر عائم مصغر)"
+          body: "الإصدار 3.0: زر عائم دائري صغير جداً + ترجمة النصوص مباشرة في نفس أماكنها فوق الشاشة مثل Google Lens تماماً."
           files: |
-            ScreenTranslator-v2.apk
-            ScreenTranslator-v2.aab
+            ScreenTranslator-v3.apk
+            ScreenTranslator-v3.aab
 
       - name: Upload Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenTranslator-v2-Signed-APK
-          path: ScreenTranslator-v2.apk
+          name: ScreenTranslator-v3-Signed-APK
+          path: ScreenTranslator-v3.apk
 
       - name: Upload Signed AAB Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenTranslator-v2-Signed-AAB
-          path: ScreenTranslator-v2.aab
+          name: ScreenTranslator-v3-Signed-AAB
+          path: ScreenTranslator-v3.aab
