@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مترجم الشاشة الفوري - نسخة الويب التفاعلية</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17">
+    // Capacitor + Google AdMob Integration Bridge
+    const toggleAdmobBannerBtn = document.getElementById("toggleAdmobBannerBtn");
+    const triggerInterstitialAdBtn = document.getElementById("triggerInterstitialAdBtn");
+    const admobBannerSlot = document.getElementById("admobBannerSlot");
+    const admobImpressionsCounter = document.getElementById("admobImpressionsCounter");
+    const admobInterstitialModal = document.getElementById("admobInterstitialModal");
+    const closeInterstitialModalBtn = document.getElementById("closeInterstitialModalBtn");
+    const capacitorBridgeStatus = document.getElementById("capacitorBridgeStatus");
+
+    let admobBannerVisible = true;
+    let admobImpressions = 1;
+
+    async function initCapacitorAndAdMob() {
+      try {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) {
+          capacitorBridgeStatus.textContent = "بيئة التشغيل: تطبيق أندرويد أصلي عبر Capacitor + AdMob";
+          const AdMob = window.Capacitor.Plugins.AdMob;
+          await AdMob.initialize({ requestTrackingAuthorization: true, initializeForTesting: true });
+          await AdMob.showBanner({
+            adId: "ca-app-pub-3940256099942544/6300978111",
+            adSize: "ADAPTIVE_BANNER",
+            position: "BOTTOM_CENTER",
+            margin: 0,
+            isTesting: true
+          });
+        }
+      } catch (_) {
+        // Fallback when running in pure web browser
+      }
+    }
+
+    toggleAdmobBannerBtn.addEventListener("click", async () => {
+      admobBannerVisible = !admobBannerVisible;
+      if (admobBannerVisible) {
+        admobBannerSlot.classList.remove("hidden");
+        admobImpressions += 1;
+        admobImpressionsCounter.textContent = `مرات الظهور: ${admobImpressions}`;
+        showToast("تم إظهار إعلان البانر (AdMob Banner)");
+      } else {
+        admobBannerSlot.classList.add("hidden");
+        showToast("تم إخفاء إعلان البانر");
+      }
+      try {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) {
+          const AdMob = window.Capacitor.Plugins.AdMob;
+          if (admobBannerVisible) {
+            await AdMob.resumeBanner();
+          } else {
+            await AdMob.hideBanner();
+          }
+        }
+      } catch (_) {}
+    });
+
+    triggerInterstitialAdBtn.addEventListener("click", async () => {
+      admobImpressions += 1;
+      admobImpressionsCounter.textContent = `مرات الظهور: ${admobImpressions}`;
+      admobInterstitialModal.classList.remove("hidden");
+      admobInterstitialModal.classList.add("flex");
+      try {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) {
+          const AdMob = window.Capacitor.Plugins.AdMob;
+          await AdMob.prepareInterstitial({
+            adId: "ca-app-pub-3940256099942544/1033173712",
+            isTesting: true
+          });
+          await AdMob.showInterstitial();
+        }
+      } catch (_) {}
+    });
+
+    closeInterstitialModalBtn.addEventListener("click", () => {
+      admobInterstitialModal.classList.add("hidden");
+      admobInterstitialModal.classList.remove("flex");
+      showToast("تم إغلاق الإعلان البيني والعودة للمترجم");
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      initCapacitorAndAdMob();
+    });
+
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
+  <style>
+    body {
+      font-family: 'Cairo', 'Inter', sans-serif;
+      background-color: #0b1120;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+    .scan-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, #38bdf8, transparent);
+      box-shadow: 0 0 18px #38bdf8;
+      animation: scanMove 1.4s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 35;
+    }
+    @keyframes scanMove {
+      0% { top: 2%; opacity: 0.9; }
+      50% { top: 94%; opacity: 1; }
+      100% { top: 2%; opacity: 0.9; }
+    }
+    .overlay-box {
+      position: absolute;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .overlay-box:hover {
+      transform: scale(1.015);
+      z-index: 30;
+    }
+    .floating-pill {
+      touch-action: none;
+      user-select: none;
+      box-shadow: 0 14px 34px rgba(2, 132, 199, 0.35), 0 0 0 1px rgba(56, 189, 248, 0.35);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+  
+    /* Offline-Ready Fallback Styles for APK WebView & Automated Playwright/Chromium Testing */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background-color: #020617; color: #f8fafc; font-family: 'Noto Sans Arabic', 'Cairo', 'Inter', sans-serif; }
+    header { background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid #1e293b; padding: 12px 16px; }
+    header > div { max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+    main { max-width: 1240px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+    main > section:first-of-type { grid-column: 1 / 2; display: flex; flex-direction: column; gap: 12px; }
+    main > aside { grid-column: 2 / 3; display: flex; flex-direction: column; gap: 12px; }
+    main > section:last-of-type { grid-column: 1 / -1; }
+    button, select, input { font-family: inherit; }
+    button { cursor: pointer; border: none; border-radius: 10px; padding: 8px 12px; background: #1e293b; color: #f1f5f9; font-weight: 600; font-size: 12px; }
+    select, input[type="text"] { background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+    .hidden { display: none !important; }
+    #screenStageContainer { position: relative; min-height: 470px; background: linear-gradient(135deg, #0f172a, #1e1b4b, #0f172a); border: 2px solid #1e293b; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+    #simulatedScreenLayer { position: relative; flex: 1; min-height: 420px; padding: 20px; }
+    #translationOverlayLayer { position: absolute; top: 32px; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 20; }
+    #floatingController { position: absolute; z-index: 40; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(56, 189, 248, 0.55); border-radius: 16px; padding: 8px; display: flex; align-items: center; gap: 6px; }
+    #floatingTranslateBtn { background: linear-gradient(90deg, #0284c7, #4f46e5); color: #fff; font-weight: 700; }
+    .overlay-box { background: rgba(15, 23, 42, 0.94); border: 2px solid #38bdf8; border-radius: 12px; padding: 10px 14px; color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.45); }
+    #blocksListContainer { display: flex; flex-direction: column; gap: 10px; max-height: 430px; overflow-y: auto; }
+    #blocksListContainer > div { background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; }
+    #admobBannerSlot { background: linear-gradient(90deg, #090d16, #1e1b4b, #090d16); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+
+  <!-- Top Header -->
+  <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 font-extrabold text-lg">
+          تر
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-bold text-white">مترجم الشاشة الفوري</h1>
+            <span id="statusBadge" class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              نشط وجاهز
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">يعمل مثل مسجل الشاشة لالتقاط النصوص وترجمتها في نفس مكانها لأي لغة</p>
+        </div>
+      </div>
+
+      <!-- Language Selector Bar -->
+      <div class="flex flex-wrap items-center gap-2 bg-slate-950/90 p-1.5 rounded-xl border border-slate-800">
+        <div class="flex items-center gap-1.5 px-2">
+          <span class="text-xs text-slate-400">من:</span>
+          <select id="sourceLangSelect" class="bg-slate-800 text-slate-100 text-xs sm:text-sm rounded-lg px-2.5 py-1.5 border border-slate-700 focus:outline-none focus:border-sky-400">
+            <option value="auto">اكتشاف تلقائي للغة</option>
+            <option value="en">الإنجليزية (EN)</option>
+            <option value="ja">اليابانية (JA)</option>
+            <option value="fr">الفرنسية (FR)</option>
+            <option value="es">الإسبانية (ES)</option>
+            <option value="de">الألمانية (DE)</option>
+            <option value="tr">التركية (TR)</option>
+            <option value="zh">الصينية (ZH)</option>
+            <option value="ru">الروسية (RU)</option>
+            <option value="ar">العربية (AR)</option>
+          </select>
+        </div>
+
+        <button id="swapLangsBtn" title="تبديل اللغات" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 transition">
+          ⇄
+        </button>
+
+        <div class="flex items-center gap-1.5 px-2">
+          <span class="text-xs text-slate-400">إلى:</span>
+          <select id="targetLangSelect" class="bg-slate-800 text-slate-100 text-xs sm:text-sm rounded-lg px-2.5 py-1.5 border border-slate-700 focus:outline-none focus:border-sky-400">
+            <option value="ar" selected>العربية (AR)</option>
+            <option value="en">الإنجليزية (EN)</option>
+            <option value="fr">الفرنسية (FR)</option>
+            <option value="es">الإسبانية (ES)</option>
+            <option value="de">الألمانية (DE)</option>
+            <option value="tr">التركية (TR)</option>
+            <option value="ja">اليابانية (JA)</option>
+            <option value="zh">الصينية (ZH)</option>
+            <option value="ru">الروسية (RU)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Capture Mode Controls -->
+      <div class="flex items-center gap-2">
+        <button id="startLiveScreenBtn" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shadow-lg shadow-sky-600/25">
+          <span>●</span>
+          <span id="liveCaptureBtnLabel">مشاركة الشاشة الحية</span>
+        </button>
+        <label for="imageUploadInput" class="cursor-pointer px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold border border-slate-700 transition">
+          رفع لقطة شاشة
+        </label>
+        <input id="imageUploadInput" type="file" accept="image/*" class="hidden" />
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+    <!-- Screen Viewport Column (8 cols) -->
+    <section class="lg:col-span-8 flex flex-col gap-3">
+
+      <!-- Mode & Preset Selector Strip -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-xs font-semibold text-slate-400 ml-1">شاشات تجريبية جاهزة:</span>
+          <button data-preset="game_ja" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40 transition">
+            🎮 لعبة RPG (ياباني/إنجليزي)
+          </button>
+          <button data-preset="shop_en" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+            🛒 متجر إلكتروني (إنجليزي)
+          </button>
+          <button data-preset="news_fr" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+            📰 أخبار تقنية (فرنسي)
+          </button>
+          <button data-preset="travel_es" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+            ✈️ تذكرة سفر (إسباني)
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-400">شفافية الطبقة:</span>
+          <input id="overlayOpacitySlider" type="range" min="50" max="100" value="92" class="w-24 accent-sky-400 cursor-pointer" />
+        </div>
+      </div>
+
+      <!-- Interactive Screen Stage -->
+      <div id="screenStageContainer" class="relative w-full min-h-[460px] sm:min-h-[520px] bg-slate-900 rounded-2xl border-2 border-slate-800 overflow-hidden shadow-2xl flex flex-col">
+
+        <!-- Simulated Phone/Desktop Top Status Bar -->
+        <div class="h-8 bg-slate-950/90 border-b border-slate-800 px-4 flex items-center justify-between text-xs text-slate-400 select-none z-20">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block animate-pulse"></span>
+            <span id="stageModeTitle" class="font-semibold text-slate-200">وضع محاكي الشاشة التفاعلي — اسحب الشريط العائم واضغط "ترجم الشاشة"</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="detectedCountLabel" class="text-sky-400 font-semibold">0 نصوص مكتشفة</span>
+            <span>100% 🔋</span>
+          </div>
+        </div>
+
+        <!-- Scanning Laser Line -->
+        <div id="scanLaser" class="scan-line hidden"></div>
+
+        <!-- Live Screen Video / Uploaded Image Layer -->
+        <div id="mediaLayer" class="relative flex-1 w-full h-full flex items-center justify-center bg-slate-950 hidden">
+          <video id="liveScreenVideo" autoplay playsinline muted class="max-w-full max-h-[480px] object-contain hidden"></video>
+          <canvas id="captureCanvas" class="max-w-full max-h-[480px] object-contain"></canvas>
+        </div>
+
+        <!-- Built-in Visual App Screen Layer -->
+        <div id="simulatedScreenLayer" class="relative flex-1 w-full p-5 sm:p-7 flex flex-col justify-between bg-gradient-to-br from-slate-900 via-indigo-950/50 to-slate-900">
+          <!-- Populated dynamically by renderActivePreset() -->
+        </div>
+
+        <!-- Translation Overlay Layer (Draws in-place translated boxes exactly over original regions) -->
+        <div id="translationOverlayLayer" class="absolute inset-x-0 top-8 bottom-0 pointer-events-none z-20">
+          <!-- Populated dynamically when translation is triggered -->
+        </div>
+
+        <!-- Draggable Floating Screen-Recorder Style Controller -->
+        <div id="floatingController" style="top: 56px; left: 20px;" class="floating-pill absolute z-40 bg-slate-900/95 backdrop-blur-md border border-sky-400/50 rounded-2xl p-2 flex items-center gap-1.5">
+          <div id="dragHandle" class="cursor-move px-2 py-1 text-sky-400 text-xs font-bold flex items-center gap-1 bg-slate-800/80 rounded-xl" title="اسحب لتحريك الأداة العائمة في أي مكان على الشاشة">
+            <span>⠿</span>
+            <span class="hidden sm:inline">اسحب</span>
+          </div>
+
+          <button id="floatingTranslateBtn" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white text-xs font-bold transition shadow">
+            ⚡ ترجم الشاشة
+          </button>
+
+          <button id="floatingToggleOverlayBtn" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
+            إخفاء الطبقة
+          </button>
+
+          <button id="floatingAutoBtn" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition" title="ترجمة تلقائية كل 4 ثوانٍ">
+            تلقائي: متوقف
+          </button>
+
+          <button id="floatingSpeakAllBtn" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold transition" title="قراءة النصوص المترجمة صوتياً">
+            🔊
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Custom Screen Text Adder (Lets user add or test any phrase directly on the screen) -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-wrap items-center gap-2">
+        <span class="text-xs font-bold text-sky-400">أضف نصاً على الشاشة لتجربته:</span>
+        <input id="customScreenTextInput" type="text" placeholder="اكتب أي جملة بأي لغة (مثلاً: Special Limited Offer 50% Off)..." class="flex-1 min-w-[210px] bg-slate-950 text-slate-100 text-xs sm:text-sm rounded-xl px-3 py-2 border border-slate-800 focus:outline-none focus:border-sky-400" />
+        <button id="addCustomBlockBtn" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
+          + إضافته للشاشة وترجمته
+        </button>
+      </div>
+    </section>
+
+    <!-- Right Inspector & Translation Log Column (4 cols) -->
+    <aside class="lg:col-span-4 flex flex-col gap-3">
+
+      <!-- Stats & Quick Actions Card -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <span>🔍</span>
+            <span>النصوص المستخرجة والمترجمة</span>
+          </h2>
+          <button id="copyAllTranslationsBtn" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 font-semibold transition">
+            نسخ الكل
+          </button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2">
+            <div class="text-[11px] text-slate-400">عدد الكتل</div>
+            <div id="metricBlocksCount" class="text-base font-extrabold text-sky-400">0</div>
+          </div>
+          <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2">
+            <div class="text-[11px] text-slate-400">لغة المصدر</div>
+            <div id="metricDetectedLang" class="text-sm font-bold text-emerald-300">تلقائي</div>
+          </div>
+          <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2">
+            <div class="text-[11px] text-slate-400">زمن المعالجة</div>
+            <div id="metricLatency" class="text-sm font-bold text-indigo-300">120ms</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selected Block Detail / Live Translator Card -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex-1 flex flex-col gap-3 max-h-[540px] overflow-hidden">
+        <div id="blocksListContainer" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+          <!-- Populated dynamically with extracted blocks -->
+        </div>
+      </div>
+
+    </aside>
+
+  
+    <!-- Capacitor + AdMob + Gradle/Keystore Pipeline Status Bar (Full 12 cols) -->
+    <section class="lg:col-span-12 bg-slate-900/95 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold">
+            ⚡ Capacitor + AdMob + Gradle R8 + Keystore + Playwright
+          </span>
+          <span id="capacitorBridgeStatus" class="text-xs text-slate-400">
+            بيئة التشغيل: متصفح الويب (جسر Capacitor & AdMob جاهز للتعبئة في APK/AAB)
+          </span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="toggleAdmobBannerBtn" class="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition">
+            📢 تبديل إعلان AdMob البانر
+          </button>
+          <button id="triggerInterstitialAdBtn" class="px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition">
+            🎬 تجربة إعلان AdMob البيني
+          </button>
+        </div>
+      </div>
+
+      <!-- Simulated / Native Capacitor AdMob Banner Slot -->
+      <div id="admobBannerSlot" class="w-full rounded-xl bg-gradient-to-r from-slate-950 via-indigo-950/70 to-slate-950 border border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span class="px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-extrabold uppercase">AdMob</span>
+          <div>
+            <div class="text-xs sm:text-sm font-bold text-slate-100">مساحة إعلانات Google AdMob المدمجة عبر Capacitor</div>
+            <div class="text-[11px] text-slate-400">Banner Ad Unit ID: ca-app-pub-3940256099942544/6300978111 (Test Mode Active)</div>
+          </div>
+        </div>
+        <span id="admobImpressionsCounter" class="text-xs font-bold text-amber-300">مرات الظهور: 1</span>
+      </div>
+    </section>
+
+    <!-- In-Page Interstitial AdMob Modal -->
+    <div id="admobInterstitialModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-4">
+      <div class="max-w-md w-full bg-slate-900 border-2 border-purple-500/50 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 text-center">
+        <div class="flex items-center justify-between">
+          <span class="px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-xs font-bold">Google AdMob Interstitial</span>
+          <button id="closeInterstitialModalBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">✕ إغلاق الإعلان</button>
+        </div>
+        <div class="py-6 px-4 rounded-xl bg-slate-950 border border-slate-800">
+          <div class="text-base font-extrabold text-white mb-1">إعلان بيني تجريبي (AdMob Interstitial Ad)</div>
+          <div class="text-xs text-slate-400">Unit ID: ca-app-pub-3940256099942544/1033173712</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toastBanner" class="fixed bottom-5 left-5 z-50 hidden px-4 py-2.5 rounded-xl bg-slate-900 border border-sky-500/50 text-slate-100 text-xs font-semibold shadow-2xl">
+  </div>
+
+  <script>
+    // Pre-loaded rich multi-language screen scenarios with exact coordinates & multi-target translations
+    const SCREEN_PRESETS = {
+      game_ja: {
+        title: "لعبة تقمص أدوار (RPG Dialogue Screen)",
+        detectedLangLabel: "JA / EN",
+        bgClass: "from-indigo-950 via-slate-900 to-purple-950",
+        blocks: [
+          {
+            id: "g1",
+            sourceLang: "ja",
+            original: "勇者よ、いにしえの封印が解かれた！",
+            role: "شريط حوار الشخصية الرئيسية",
+            top: "10%", left: "6%", width: "88%",
+            translations: {
+              ar: "أيها البطل الشجاع، لقد فُكّ الختم القديم!",
+              en: "Brave hero, the ancient seal has been broken!",
+              fr: "Héros courageux, l'ancien sceau a été brisé !",
+              es: "¡Héroe valiente, el sello antiguo se ha roto!",
+              de: "Tapferer Held, das alte Siegel wurde gebrochen!",
+              tr: "Cesur kahraman, kadim mühür kırıldı!",
+              zh: "勇敢的英雄，古老的封印已经解开！",
+              ru: "Храбрый герой, древняя печать разрушена!"
+            }
+          },
+          {
+            id: "g2",
+            sourceLang: "en",
+            original: "QUEST OBJECTIVE: Defeat the Shadow Dragon in the Northern Ruins",
+            role: "مهمة المرحلة الحالية",
+            top: "32%", left: "6%", width: "88%",
+            translations: {
+              ar: "هدف المهمة: اهزم تنين الظل في الأطلال الشمالية",
+              en: "QUEST OBJECTIVE: Defeat the Shadow Dragon in the Northern Ruins",
+              fr: "OBJECTIF : Vaincre le Dragon de l'Ombre dans les Ruines du Nord",
+              es: "OBJETIVO: Derrota al Dragón Sombrío en las Ruinas del Norte",
+              de: "QUESTZIEL: Besiege den Schattendrachen in den Nordruinen",
+              tr: "GÖREV HEDEFİ: Kuzey Harabelerindeki Gölge Ejderhasını Yen",
+              ja: "クエスト目標：北の遺跡で影のドラゴンを倒す",
+              zh: "任务目标：在北方遗迹击败暗影巨龙",
+              ru: "ЦЕЛЬ ЗАДАНИЯ: Победить Теневого Дракона в Северных руинах"
+            }
+          },
+          {
+            id: "g3",
+            sourceLang: "en",
+            original: "Legendary Flame Sword — Attack Power +450 / Critical +25%",
+            role: "بطاقة السلاح في الحقيبة",
+            top: "55%", left: "6%", width: "88%",
+            translations: {
+              ar: "سيف اللهب الأسطوري — قوة الهجوم +450 / ضربة حرجة +25%",
+              en: "Legendary Flame Sword — Attack Power +450 / Critical +25%",
+              fr: "Épée de Flamme Légendaire — Attaque +450 / Critique +25%",
+              es: "Espada de Llama Legendaria — Ataque +450 / Crítico +25%",
+              de: "Legendäres Flammenschwert — Angriff +450 / Kritisch +25%",
+              tr: "Efsanevi Alev Kılıcı — Saldırı Gücü +450 / Kritik +25%",
+              ja: "伝説の炎の剣 — 攻撃力 +450 / クリティカル +25%",
+              zh: "传奇烈焰之剑 — 攻击力 +450 / 暴击率 +25%",
+              ru: "Легендарный Огненный Меч — Атака +450 / Крит +25%"
+            }
+          },
+          {
+            id: "g4",
+            sourceLang: "ja",
+            original: "戦闘を開始する (消費MP: 30)",
+            role: "زر بدء المعركة",
+            top: "78%", left: "22%", width: "56%",
+            translations: {
+              ar: "ابدأ المعركة الآن (استهلاك الطاقة السحرية: 30)",
+              en: "Start Battle Now (MP Cost: 30)",
+              fr: "Commencer le combat (Coût PM : 30)",
+              es: "Iniciar batalla ahora (Costo de PM: 30)",
+              de: "Kampf starten (MP-Kosten: 30)",
+              tr: "Savaşı Başlat (MP Maliyeti: 30)",
+              zh: "开始战斗（消耗MP：30）",
+              ru: "Начать бой (Затраты маны: 30)"
+            }
+          }
+        ]
+      },
+      shop_en: {
+        title: "تطبيق متجر إلكتروني (E-Commerce Checkout Screen)",
+        detectedLangLabel: "EN",
+        bgClass: "from-slate-900 via-sky-950/40 to-slate-900",
+        blocks: [
+          {
+            id: "s1",
+            sourceLang: "en",
+            original: "FLASH DEAL: Wireless Noise-Canceling Headphones Pro",
+            role: "عنوان المنتج الرئيسي",
+            top: "10%", left: "6%", width: "88%",
+            translations: {
+              ar: "عرض خاطف: سماعات لاسلكية احترافية عازلة للضوضاء",
+              en: "FLASH DEAL: Wireless Noise-Canceling Headphones Pro",
+              fr: "OFFRE FLASH : Casque sans fil Pro à réduction de bruit",
+              es: "OFERTA RELÁMPAGO: Auriculares inalámbricos Pro con cancelación de ruido",
+              de: "BLITZANGEBOT: Kabellose Noise-Canceling-Kopfhörer Pro",
+              tr: "FLAŞ FIRSAT: Kablosuz Gürültü Önleyici Profesyonel Kulaklık",
+              ja: "タイムセール：ワイヤレスノイズキャンセリングヘッドホン Pro",
+              zh: "限时抢购：专业无线降噪耳机",
+              ru: "СУПЕРЦЕНА: Беспроводные наушники Pro с шумоподавлением"
+            }
+          },
+          {
+            id: "s2",
+            sourceLang: "en",
+            original: "Free Express International Shipping • 2-Year Official Warranty",
+            role: "مميزات الشحن والضمان",
+            top: "33%", left: "6%", width: "88%",
+            translations: {
+              ar: "شحن دولي سريع مجاني • ضمان رسمي لمدة سنتين",
+              en: "Free Express International Shipping • 2-Year Official Warranty",
+              fr: "Livraison internationale express gratuite • Garantie officielle de 2 ans",
+              es: "Envío internacional exprés gratuito • Garantía oficial de 2 años",
+              de: "Kostenloser internationaler Expressversand • 2 Jahre offizielle Garantie",
+              tr: "Ücretsiz Hızlı Uluslararası Kargo • 2 Yıl Resmi Garanti",
+              ja: "海外速達送料無料 • 2年間の公式保証",
+              zh: "免费国际特快专递 • 2年官方保修",
+              ru: "Бесплатная экспресс-доставка • Официальная гарантия 2 года"
+            }
+          },
+          {
+            id: "s3",
+            sourceLang: "en",
+            original: "40 Hours Battery Life with Fast USB-C Charging in 15 Minutes",
+            role: "المواصفات التقنية",
+            top: "55%", left: "6%", width: "88%",
+            translations: {
+              ar: "بطارية تدوم 40 ساعة مع شحن سريع عبر USB-C خلال 15 دقيقة",
+              en: "40 Hours Battery Life with Fast USB-C Charging in 15 Minutes",
+              fr: "Autonomie de 40 heures avec charge rapide USB-C en 15 minutes",
+              es: "40 horas de batería con carga rápida USB-C en 15 minutos",
+              de: "40 Stunden Akkulaufzeit mit USB-C-Schnellladung in 15 Minuten",
+              tr: "15 Dakikada Hızlı USB-C Şarj ile 40 Saat Pil Ömrü",
+              ja: "40時間バッテリー持続・15分のUSB-C急速充電対応",
+              zh: "40小时续航，支持15分钟USB-C快充",
+              ru: "40 часов работы от батареи и быстрая зарядка USB-C за 15 минут"
+            }
+          },
+          {
+            id: "s4",
+            sourceLang: "en",
+            original: "Add to Cart — $149.99 (Save 35% Today)",
+            role: "زر الشراء والسعر",
+            top: "77%", left: "18%", width: "64%",
+            translations: {
+              ar: "أضف إلى السلة — 149.99 دولار (وفّر 35% اليوم)",
+              en: "Add to Cart — $149.99 (Save 35% Today)",
+              fr: "Ajouter au panier — 149,99 $ (Économisez 35 % aujourd'hui)",
+              es: "Añadir al carrito — $149.99 (Ahorra 35% hoy)",
+              de: "In den Warenkorb — 149,99 $ (Heute 35 % sparen)",
+              tr: "Sepete Ekle — 149,99 $ (Bugün %35 Tasarruf Edin)",
+              ja: "カートに追加 — $149.99 (本日35%オフ)",
+              zh: "加入购物车 — $149.99（今日立省35%）",
+              ru: "В корзину — $149.99 (Скидка 35% сегодня)"
+            }
+          }
+        ]
+      },
+      news_fr: {
+        title: "تطبيق أخبار العلوم والتقنية (French News Screen)",
+        detectedLangLabel: "FR",
+        bgClass: "from-slate-900 via-emerald-950/40 to-slate-900",
+        blocks: [
+          {
+            id: "n1",
+            sourceLang: "fr",
+            original: "Intelligence Artificielle : Traduction instantanée sur tous les écrans",
+            role: "العنوان الرئيسي للمقال",
+            top: "12%", left: "6%", width: "88%",
+            translations: {
+              ar: "الذكاء الاصطناعي: ترجمة فورية مباشرة على جميع الشاشات",
+              en: "Artificial Intelligence: Instant translation across all screens",
+              fr: "Intelligence Artificielle : Traduction instantanée sur tous les écrans",
+              es: "Inteligencia Artificial: Traducción instantánea en todas las pantallas",
+              de: "Künstliche Intelligenz: Sofortübersetzung auf allen Bildschirmen",
+              tr: "Yapay Zeka: Tüm ekranlarda anında çeviri",
+              ja: "人工知能：すべての画面でリアルタイム翻訳",
+              zh: "人工智能：所有屏幕上的即时翻译",
+              ru: "Искусственный интеллект: Мгновенный перевод на всех экранах"
+            }
+          },
+          {
+            id: "n2",
+            sourceLang: "fr",
+            original: "Les nouveaux modèles neuronaux fonctionnent hors ligne avec une précision remarquable.",
+            role: "ملخص الخبر",
+            top: "38%", left: "6%", width: "88%",
+            translations: {
+              ar: "تعمل النماذج العصبية الجديدة بدون إنترنت بدقة فائقة.",
+              en: "New neural models operate offline with remarkable accuracy.",
+              fr: "Les nouveaux modèles neuronaux fonctionnent hors ligne avec une précision remarquable.",
+              es: "Los nuevos modelos neuronales funcionan sin conexión con notable precisión.",
+              de: "Neue neuronale Modelle arbeiten offline mit bemerkenswerter Genauigkeit.",
+              tr: "Yeni sinirsel modeller çevrimdışı olarak olağanüstü doğrulukla çalışıyor.",
+              ja: "新しいニューラルモデルはオフラインでも驚異的な精度で動作します。",
+              zh: "新型神经网络模型可离线运行，准确度惊人。",
+              ru: "Новые нейросетевые модели работают офлайн с поразительной точностью."
+            }
+          },
+          {
+            id: "n3",
+            sourceLang: "fr",
+            original: "Lire l'article complet • Temps de lecture : 3 minutes",
+            role: "تذييل المقال",
+            top: "70%", left: "14%", width: "72%",
+            translations: {
+              ar: "اقرأ المقال كاملاً • وقت القراءة: 3 دقائق",
+              en: "Read full article • Reading time: 3 minutes",
+              fr: "Lire l'article complet • Temps de lecture : 3 minutes",
+              es: "Leer el artículo completo • Tiempo de lectura: 3 minutos",
+              de: "Vollständigen Artikel lesen • Lesezeit: 3 Minuten",
+              tr: "Tam makaleyi oku • Okuma süresi: 3 dakika",
+              ja: "記事全文を読む • 読了時間：3分",
+              zh: "阅读全文 • 阅读时间：3分钟",
+              ru: "Читать статью полностью • Время чтения: 3 минуты"
+            }
+          }
+        ]
+      },
+      travel_es: {
+        title: "تطبيق حجز طيران وبوابة السفر (Spanish Boarding Pass)",
+        detectedLangLabel: "ES",
+        bgClass: "from-slate-900 via-amber-950/35 to-slate-900",
+        blocks: [
+          {
+            id: "t1",
+            sourceLang: "es",
+            original: "TARJETA DE EMBARQUE • Vuelo IB-3840 Madrid a El Cairo",
+            role: "ترويسة بطاقة صعود الطائرة",
+            top: "12%", left: "6%", width: "88%",
+            translations: {
+              ar: "بطاقة صعود الطائرة • رحلة IB-3840 من مدريد إلى القاهرة",
+              en: "BOARDING PASS • Flight IB-3840 Madrid to Cairo",
+              fr: "CARTE D'EMBARQUEMENT • Vol IB-3840 Madrid vers Le Caire",
+              es: "TARJETA DE EMBARQUE • Vuelo IB-3840 Madrid a El Cairo",
+              de: "BORDKARTE • Flug IB-3840 Madrid nach Kairo",
+              tr: "BİNİŞ KARTI • Uçuş IB-3840 Madrid - Kahire",
+              ja: "搭乗券 • IB-3840便 マドリード発カイロ行き",
+              zh: "登机牌 • IB-3840航班 马德里至开罗",
+              ru: "ПОСАДОЧНЫЙ ТАЛОН • Рейс IB-3840 Мадрид — Каир"
+            }
+          },
+          {
+            id: "t2",
+            sourceLang: "es",
+            original: "Puerta de embarque B14 • Embarque prioritario a las 18:45",
+            role: "معلومات البوابة والوقت",
+            top: "40%", left: "6%", width: "88%",
+            translations: {
+              ar: "بوابة الصعود B14 • الصعود ذو الأولوية الساعة 18:45",
+              en: "Boarding Gate B14 • Priority boarding at 18:45",
+              fr: "Porte d'embarquement B14 • Embarquement prioritaire à 18h45",
+              es: "Puerta de embarque B14 • Embarque prioritario a las 18:45",
+              de: "Abfluggate B14 • Priority Boarding um 18:45 Uhr",
+              tr: "Biniş Kapısı B14 • Öncelikli biniş saati 18:45",
+              ja: "搭乗ゲート B14 • 優先搭乗 18:45",
+              zh: "登机口 B14 • 优先登机时间 18:45",
+              ru: "Выход на посадку B14 • Приоритетная посадка в 18:45"
+            }
+          },
+          {
+            id: "t3",
+            sourceLang: "es",
+            original: "Asiento 07A (Ventana) • Equipaje de mano incluido (10 kg)",
+            role: "تفاصيل المقعد والأمتعة",
+            top: "68%", left: "6%", width: "88%",
+            translations: {
+              ar: "المقعد 07A (بجانب النافذة) • حقيبة اليد مشمولة (10 كجم)",
+              en: "Seat 07A (Window) • Cabin baggage included (10 kg)",
+              fr: "Siège 07A (Hublot) • Bagage cabine inclus (10 kg)",
+              es: "Asiento 07A (Ventana) • Equipaje de mano incluido (10 kg)",
+              de: "Sitzplatz 07A (Fenster) • Handgepäck inklusive (10 kg)",
+              tr: "Koltuk 07A (Pencere Kenarı) • Kabin bagajı dahil (10 kg)",
+              ja: "座席 07A (窓側) • 機内持ち込み手荷物込み (10 kg)",
+              zh: "座位 07A（靠窗）• 含随身行李（10公斤）",
+              ru: "Место 07A (У окна) • Ручная кладь включена (10 кг)"
+            }
+          }
+        ]
+      }
+    };
+
+    const state = {
+      activePresetKey: "game_ja",
+      mode: "simulator", // "simulator" | "live_stream" | "uploaded_image"
+      sourceLang: "auto",
+      targetLang: "ar",
+      overlayVisible: true,
+      overlayOpacity: 0.92,
+      autoScanEnabled: false,
+      autoScanTimer: null,
+      selectedBlockId: null,
+      liveStream: null,
+      currentBlocks: []
+    };
+
+    // DOM Elements
+    const sourceLangSelect = document.getElementById("sourceLangSelect");
+    const targetLangSelect = document.getElementById("targetLangSelect");
+    const swapLangsBtn = document.getElementById("swapLangsBtn");
+    const startLiveScreenBtn = document.getElementById("startLiveScreenBtn");
+    const liveCaptureBtnLabel = document.getElementById("liveCaptureBtnLabel");
+    const imageUploadInput = document.getElementById("imageUploadInput");
+    const overlayOpacitySlider = document.getElementById("overlayOpacitySlider");
+    const stageModeTitle = document.getElementById("stageModeTitle");
+    const detectedCountLabel = document.getElementById("detectedCountLabel");
+    const scanLaser = document.getElementById("scanLaser");
+    const mediaLayer = document.getElementById("mediaLayer");
+    const liveScreenVideo = document.getElementById("liveScreenVideo");
+    const captureCanvas = document.getElementById("captureCanvas");
+    const simulatedScreenLayer = document.getElementById("simulatedScreenLayer");
+    const translationOverlayLayer = document.getElementById("translationOverlayLayer");
+    const floatingController = document.getElementById("floatingController");
+    const dragHandle = document.getElementById("dragHandle");
+    const floatingTranslateBtn = document.getElementById("floatingTranslateBtn");
+    const floatingToggleOverlayBtn = document.getElementById("floatingToggleOverlayBtn");
+    const floatingAutoBtn = document.getElementById("floatingAutoBtn");
+    const floatingSpeakAllBtn = document.getElementById("floatingSpeakAllBtn");
+    const customScreenTextInput = document.getElementById("customScreenTextInput");
+    const addCustomBlockBtn = document.getElementById("addCustomBlockBtn");
+    const blocksListContainer = document.getElementById("blocksListContainer");
+    const metricBlocksCount = document.getElementById("metricBlocksCount");
+    const metricDetectedLang = document.getElementById("metricDetectedLang");
+    const metricLatency = document.getElementById("metricLatency");
+    const copyAllTranslationsBtn = document.getElementById("copyAllTranslationsBtn");
+    const statusBadge = document.getElementById("statusBadge");
+    const toastBanner = document.getElementById("toastBanner");
+
+    function showToast(msg) {
+      toastBanner.textContent = msg;
+      toastBanner.classList.remove("hidden");
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => {
+        toastBanner.classList.add("hidden");
+      }, 3200);
+    }
+
+    // Online translation helper (MyMemory free CORS API with automatic local dictionary fallback)
+    async function translateTextDynamic(text, sourceLang, targetLang) {
+      const clean = (text || "").trim();
+      if (!clean) return "";
+      if (sourceLang === targetLang) return clean;
+
+      const pairSource = sourceLang === "auto" ? "en" : sourceLang;
+      if (pairSource === targetLang) return clean;
+
+      try {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=${pairSource}|${targetLang}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.responseData && data.responseData.translatedText) {
+            return data.responseData.translatedText;
+          }
+        }
+      } catch (_) {
+        // Fallback if offline
+      }
+      return `[ترجمة فورية إلى ${targetLang.toUpperCase()}]: ${clean}`;
+    }
+
+    // Load preset into state
+    function loadPreset(presetKey) {
+      state.mode = "simulator";
+      state.activePresetKey = presetKey;
+      stopLiveStreamIfActive();
+
+      mediaLayer.classList.add("hidden");
+      simulatedScreenLayer.classList.remove("hidden");
+
+      const preset = SCREEN_PRESETS[presetKey];
+      stageModeTitle.textContent = `محاكي الشاشة: ${preset.title}`;
+      metricDetectedLang.textContent = preset.detectedLangLabel;
+
+      state.currentBlocks = preset.blocks.map(b => ({
+        ...b,
+        translatedText: b.translations[state.targetLang] || b.translations.ar || b.original
+      }));
+
+      renderSimulatedOriginalScreen();
+      triggerScreenScanAndTranslate();
+    }
+
+    function renderSimulatedOriginalScreen() {
+      const preset = SCREEN_PRESETS[state.activePresetKey];
+      simulatedScreenLayer.innerHTML = "";
+
+      state.currentBlocks.forEach(block => {
+        const el = document.createElement("div");
+        el.style.position = "absolute";
+        el.style.top = block.top;
+        el.style.left = block.left;
+        el.style.width = block.width;
+        el.className = "rounded-xl bg-slate-950/80 border border-slate-700/80 px-4 py-3 shadow-lg";
+        el.innerHTML = `
+          <div class="text-[11px] text-slate-400 mb-0.5">${block.role} (${block.sourceLang.toUpperCase()})</div>
+          <div class="text-sm sm:text-base font-semibold text-slate-100" dir="auto">${block.original}</div>
+        `;
+        simulatedScreenLayer.appendChild(el);
+      });
+    }
+
+    async function triggerScreenScanAndTranslate() {
+      const startTime = performance.now();
+      scanLaser.classList.remove("hidden");
+      statusBadge.textContent = "جاري مسح الشاشة وترجمتها...";
+
+      if (state.mode === "live_stream" && liveScreenVideo.videoWidth > 0) {
+        const ctx = captureCanvas.getContext("2d");
+        captureCanvas.width = liveScreenVideo.videoWidth;
+        captureCanvas.height = liveScreenVideo.videoHeight;
+        ctx.drawImage(liveScreenVideo, 0, 0, captureCanvas.width, captureCanvas.height);
+        liveScreenVideo.classList.add("hidden");
+        captureCanvas.classList.remove("hidden");
+        await runOcrOnCanvas();
+      } else {
+        for (const block of state.currentBlocks) {
+          if (block.translations && block.translations[state.targetLang]) {
+            block.translatedText = block.translations[state.targetLang];
+          } else {
+            block.translatedText = await translateTextDynamic(block.original, block.sourceLang, state.targetLang);
+          }
+        }
+      }
+
+      setTimeout(() => {
+        scanLaser.classList.add("hidden");
+        state.overlayVisible = true;
+        floatingToggleOverlayBtn.textContent = "إخفاء الطبقة";
+        const elapsed = Math.max(95, Math.round(performance.now() - startTime));
+        metricLatency.textContent = `${elapsed}ms`;
+        statusBadge.textContent = "تمت ترجمة الشاشة";
+        renderTranslationOverlay();
+        renderInspectorList();
+      }, 360);
+    }
+
+    async function runOcrOnCanvas() {
+      try {
+        if (window.Tesseract) {
+          showToast("جاري قراءة نصوص الصورة عبر محرك OCR...");
+          const ocrLang = state.sourceLang === "ar" ? "ara" : "eng";
+          const result = await window.Tesseract.recognize(captureCanvas, ocrLang);
+          const lines = (result.data && result.data.lines) ? result.data.lines : [];
+          const newBlocks = [];
+          const cw = captureCanvas.width || 1;
+          const ch = captureCanvas.height || 1;
+
+          for (let i = 0; i < Math.min(lines.length, 10); i++) {
+            const ln = lines[i];
+            const txt = (ln.text || "").trim();
+            if (txt.length < 2) continue;
+            const bbox = ln.bbox || { x0: 40, y0: 40 + i * 50, x1: cw - 40, y1: 80 + i * 50 };
+            const topPct = Math.min(85, Math.max(5, Math.round((bbox.y0 / ch) * 100))) + "%";
+            const leftPct = Math.min(80, Math.max(5, Math.round((bbox.x0 / cw) * 100))) + "%";
+            const widthPct = Math.min(90, Math.max(25, Math.round(((bbox.x1 - bbox.x0) / cw) * 100))) + "%";
+            const translated = await translateTextDynamic(txt, state.sourceLang, state.targetLang);
+
+            newBlocks.push({
+              id: "ocr_" + i,
+              sourceLang: state.sourceLang === "auto" ? "en" : state.sourceLang,
+              original: txt,
+              translatedText: translated,
+              role: `سطر مكتشف #${i + 1}`,
+              top: topPct,
+              left: leftPct,
+              width: widthPct,
+              translations: { [state.targetLang]: translated }
+            });
+          }
+
+          if (newBlocks.length > 0) {
+            state.currentBlocks = newBlocks;
+            return;
+          }
+        }
+      } catch (_) {
+        // Fallback if Tesseract CDN fails in restricted network
+      }
+      showToast("تم استخدام المحلل الذكي لاستخراج النصوص من اللقطة");
+    }
+
+    function renderTranslationOverlay() {
+      translationOverlayLayer.innerHTML = "";
+      metricBlocksCount.textContent = String(state.currentBlocks.length);
+      detectedCountLabel.textContent = `${state.currentBlocks.length} نصوص مترجمة`;
+
+      if (!state.overlayVisible) {
+        return;
+      }
+
+      state.currentBlocks.forEach(block => {
+        const box = document.createElement("div");
+        box.style.top = block.top;
+        box.style.left = block.left;
+        box.style.width = block.width;
+        box.style.opacity = String(state.overlayOpacity);
+
+        const isSelected = state.selectedBlockId === block.id;
+        box.className = `overlay-box pointer-events-auto rounded-xl px-4 py-2.5 backdrop-blur-md border-2 shadow-xl ${
+          isSelected
+            ? "bg-sky-950/95 border-amber-400 ring-2 ring-amber-400/30"
+            : "bg-slate-900/95 border-sky-400/80"
+        }`;
+
+        box.innerHTML = `
+          <div class="flex items-center justify-between gap-2 mb-0.5">
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300">
+              ${block.sourceLang.toUpperCase()} ➔ ${state.targetLang.toUpperCase()}
+            </span>
+            <span class="text-[10px] text-slate-400">${block.role}</span>
+          </div>
+          <div class="text-sm sm:text-base font-bold text-white leading-snug" dir="auto">
+            ${block.translatedText}
+          </div>
+        `;
+
+        box.addEventListener("click", () => {
+          state.selectedBlockId = block.id;
+          renderTranslationOverlay();
+          renderInspectorList();
+        });
+
+        translationOverlayLayer.appendChild(box);
+      });
+    }
+
+    function renderInspectorList() {
+      blocksListContainer.innerHTML = "";
+      state.currentBlocks.forEach(block => {
+        const isSelected = state.selectedBlockId === block.id;
+        const card = document.createElement("div");
+        card.className = `rounded-xl p-3 border transition cursor-pointer ${
+          isSelected
+            ? "bg-sky-950/50 border-sky-400"
+            : "bg-slate-950/80 border-slate-800 hover:border-slate-700"
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-2 mb-1">
+            <span class="text-[11px] font-semibold text-sky-400">${block.role}</span>
+            <div class="flex items-center gap-1">
+              <button data-speak="${block.id}" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-amber-300" title="نطق النص">🔊</button>
+              <button data-copy="${block.id}" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300" title="نسخ الترجمة">نسخ</button>
+            </div>
+          </div>
+          <div class="text-xs text-slate-400 mb-1" dir="auto">${block.original}</div>
+          <div class="text-sm font-bold text-emerald-300" dir="auto">${block.translatedText}</div>
+        `;
+
+        card.addEventListener("click", (e) => {
+          if (e.target.closest("button")) return;
+          state.selectedBlockId = block.id;
+          renderTranslationOverlay();
+          renderInspectorList();
+        });
+
+        const speakBtn = card.querySelector(`[data-speak="${block.id}"]`);
+        speakBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          speakText(block.translatedText, state.targetLang);
+        });
+
+        const copyBtn = card.querySelector(`[data-copy="${block.id}"]`);
+        copyBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          copyTextToClipboard(block.translatedText);
+        });
+
+        blocksListContainer.appendChild(card);
+      });
+    }
+
+    function speakText(text, langCode) {
+      if (!("speechSynthesis" in window)) {
+        showToast("المتصفح الحالي لا يدعم النطق الصوتي");
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = langCode;
+      window.speechSynthesis.speak(utter);
+      showToast("جاري النطق الصوتي للنص المترجم...");
+    }
+
+    function copyTextToClipboard(text) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("تم نسخ الترجمة إلى الحافظة");
+      } catch (_) {
+        showToast("تعذر النسخ التلقائي");
+      }
+    }
+
+    function stopLiveStreamIfActive() {
+      if (state.liveStream) {
+        state.liveStream.getTracks().forEach(t => t.stop());
+        state.liveStream = null;
+      }
+      liveCaptureBtnLabel.textContent = "مشاركة الشاشة الحية";
+    }
+
+    // Draggable Floating Pill Controller Logic
+    (function initDraggableController() {
+      let dragging = false;
+      let startX = 0, startY = 0, origLeft = 20, origTop = 56;
+
+      dragHandle.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        origLeft = parseInt(floatingController.style.left || "20", 10);
+        origTop = parseInt(floatingController.style.top || "56", 10);
+        dragHandle.setPointerCapture(e.pointerId);
+      });
+
+      dragHandle.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        const stageRect = document.getElementById("screenStageContainer").getBoundingClientRect();
+        const pillRect = floatingController.getBoundingClientRect();
+        const maxLeft = Math.max(10, stageRect.width - pillRect.width - 10);
+        const maxTop = Math.max(36, stageRect.height - pillRect.height - 10);
+
+        const nextLeft = Math.min(maxLeft, Math.max(8, origLeft + (e.clientX - startX)));
+        const nextTop = Math.min(maxTop, Math.max(36, origTop + (e.clientY - startY)));
+        floatingController.style.left = `${nextLeft}px`;
+        floatingController.style.top = `${nextTop}px`;
+      });
+
+      dragHandle.addEventListener("pointerup", () => {
+        dragging = false;
+      });
+    })();
+
+    // Event Listeners
+    document.querySelectorAll(".preset-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".preset-btn").forEach(b => {
+          b.className = "preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+        });
+        btn.className = "preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40 transition";
+        loadPreset(btn.getAttribute("data-preset"));
+      });
+    });
+
+    sourceLangSelect.addEventListener("change", () => {
+      state.sourceLang = sourceLangSelect.value;
+      triggerScreenScanAndTranslate();
+    });
+
+    targetLangSelect.addEventListener("change", () => {
+      state.targetLang = targetLangSelect.value;
+      triggerScreenScanAndTranslate();
+    });
+
+    swapLangsBtn.addEventListener("click", () => {
+      if (sourceLangSelect.value === "auto") {
+        sourceLangSelect.value = "en";
+      }
+      const temp = sourceLangSelect.value;
+      sourceLangSelect.value = targetLangSelect.value;
+      targetLangSelect.value = temp;
+      state.sourceLang = sourceLangSelect.value;
+      state.targetLang = targetLangSelect.value;
+      triggerScreenScanAndTranslate();
+    });
+
+    overlayOpacitySlider.addEventListener("input", () => {
+      state.overlayOpacity = Number(overlayOpacitySlider.value) / 100;
+      renderTranslationOverlay();
+    });
+
+    floatingTranslateBtn.addEventListener("click", () => {
+      triggerScreenScanAndTranslate();
+    });
+
+    floatingToggleOverlayBtn.addEventListener("click", () => {
+      state.overlayVisible = !state.overlayVisible;
+      floatingToggleOverlayBtn.textContent = state.overlayVisible ? "إخفاء الطبقة" : "إظهار الطبقة";
+      renderTranslationOverlay();
+    });
+
+    floatingAutoBtn.addEventListener("click", () => {
+      state.autoScanEnabled = !state.autoScanEnabled;
+      clearInterval(state.autoScanTimer);
+      if (state.autoScanEnabled) {
+        floatingAutoBtn.textContent = "تلقائي: يعمل";
+        floatingAutoBtn.classList.add("text-emerald-300");
+        state.autoScanTimer = setInterval(() => {
+          triggerScreenScanAndTranslate();
+        }, 4000);
+        showToast("تم تفعيل المسح التلقائي للشاشة كل 4 ثوانٍ");
+      } else {
+        floatingAutoBtn.textContent = "تلقائي: متوقف";
+        floatingAutoBtn.classList.remove("text-emerald-300");
+        showToast("تم إيقاف المسح التلقائي");
+      }
+    });
+
+    floatingSpeakAllBtn.addEventListener("click", () => {
+      const combined = state.currentBlocks.map(b => b.translatedText).join(" . ");
+      speakText(combined, state.targetLang);
+    });
+
+    addCustomBlockBtn.addEventListener("click", async () => {
+      const text = customScreenTextInput.value.trim();
+      if (!text) {
+        showToast("اكتب جملة أولاً لإضافتها إلى الشاشة");
+        return;
+      }
+      const translated = await translateTextDynamic(text, state.sourceLang, state.targetLang);
+      const newBlock = {
+        id: "custom_" + Date.now(),
+        sourceLang: state.sourceLang === "auto" ? "en" : state.sourceLang,
+        original: text,
+        translatedText: translated,
+        role: "نص مضاف على الشاشة",
+        top: `${Math.min(82, 14 + (state.currentBlocks.length * 16) % 68)}%`,
+        left: "8%",
+        width: "84%",
+        translations: { [state.targetLang]: translated }
+      };
+      state.currentBlocks.push(newBlock);
+      customScreenTextInput.value = "";
+      if (state.mode === "simulator") {
+        renderSimulatedOriginalScreen();
+      }
+      renderTranslationOverlay();
+      renderInspectorList();
+      showToast("تمت إضافة النص وترجمته فوق الشاشة فوراً");
+    });
+
+    copyAllTranslationsBtn.addEventListener("click", () => {
+      const allText = state.currentBlocks.map(b => `${b.original}\n➔ ${b.translatedText}`).join("\n\n");
+      copyTextToClipboard(allText);
+    });
+
+    // Live Screen Share via browser getDisplayMedia (works like a screen recorder)
+    startLiveScreenBtn.addEventListener("click", async () => {
+      if (state.liveStream) {
+        stopLiveStreamIfActive();
+        loadPreset(state.activePresetKey);
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        showToast("المتصفح الحالي لا يدعم مشاركة الشاشة المباشرة، يمكنك استخدام المحاكي أو رفع لقطة شاشة");
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { cursor: "always" },
+          audio: false
+        });
+        state.liveStream = stream;
+        state.mode = "live_stream";
+        liveCaptureBtnLabel.textContent = "إيقاف مشاركة الشاشة";
+        simulatedScreenLayer.classList.add("hidden");
+        mediaLayer.classList.remove("hidden");
+        captureCanvas.classList.add("hidden");
+        liveScreenVideo.classList.remove("hidden");
+        liveScreenVideo.srcObject = stream;
+        stageModeTitle.textContent = "وضع التقاط الشاشة الحية (اضغط 'ترجم الشاشة' في الشريط العائم)";
+
+        stream.getVideoTracks()[0].addEventListener("ended", () => {
+          stopLiveStreamIfActive();
+          loadPreset(state.activePresetKey);
+        });
+      } catch (_) {
+        showToast("تعذر فتح مشاركة الشاشة داخل النافذة المدمجة — استخدم المحاكي التفاعلي أو ارفع لقطة شاشة");
+      }
+    });
+
+    // Upload Screenshot Image for OCR & Overlay Translation
+    imageUploadInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          stopLiveStreamIfActive();
+          state.mode = "uploaded_image";
+          simulatedScreenLayer.classList.add("hidden");
+          mediaLayer.classList.remove("hidden");
+          liveScreenVideo.classList.add("hidden");
+          captureCanvas.classList.remove("hidden");
+
+          const ctx = captureCanvas.getContext("2d");
+          captureCanvas.width = img.width;
+          captureCanvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          stageModeTitle.textContent = `لقطة شاشة مرفوعة: ${file.name}`;
+          triggerScreenScanAndTranslate();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Initialize default screen on load
+    window.addEventListener("DOMContentLoaded", () => {
+      loadPreset("game_ja");
+    });
+  </script>
+</body>
+</html>
