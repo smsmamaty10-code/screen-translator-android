@@ -251,7 +251,7 @@ public class FloatingTranslatorService extends Service {
      * - ضغطة مطولة: تغلق الزر العائم
      */
     private void createCompactFloatingBubble() {
-        int sizePx = dp(44);
+        int sizePx = dp(36);
         miniBubbleContainer = new FrameLayout(this);
 
         GradientDrawable circleBg = new GradientDrawable(
@@ -268,7 +268,7 @@ public class FloatingTranslatorService extends Service {
         bubbleIconTv = new TextView(this);
         bubbleIconTv.setText("تر");
         bubbleIconTv.setTextColor(Color.WHITE);
-        bubbleIconTv.setTextSize(13.5f);
+        bubbleIconTv.setTextSize(11.5f);
         bubbleIconTv.getPaint().setFakeBoldText(true);
         bubbleIconTv.setGravity(Gravity.CENTER);
 
