@@ -1,4 +1,4 @@
-name: Build v4 Lens APK and AAB
+name: Build v5 Custom-Style Lens APK and AAB
 
 on:
   push:
@@ -17,6 +17,22 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v4
 
+      - name: Bundle Arabic Fonts into Android Assets
+        run: |
+          sudo apt-get update && sudo apt-get install -y fonts-noto-core fonts-dejavu-core || true
+          mkdir -p app/src/main/assets/fonts
+          for f in NotoKufiArabic-Bold.ttf NotoKufiArabic-Regular.ttf NotoNaskhArabic-Bold.ttf NotoNaskhArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Regular.ttf; do
+            if [ -f "/usr/share/fonts/truetype/noto/$f" ]; then
+              cp "/usr/share/fonts/truetype/noto/$f" "app/src/main/assets/fonts/$f"
+            fi
+          done
+          for f in DejaVuSansMono-Bold.ttf DejaVuSansCondensed-Bold.ttf; do
+            if [ -f "/usr/share/fonts/truetype/dejavu/$f" ]; then
+              cp "/usr/share/fonts/truetype/dejavu/$f" "app/src/main/assets/fonts/$f"
+            fi
+          done
+          ls -lh app/src/main/assets/fonts/ || true
+
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
@@ -28,32 +44,32 @@ jobs:
         with:
           gradle-version: '8.5'
 
-      - name: Build v4.0 Lens-Style Screen Translator APK & AAB
+      - name: Build v5.0 Lens-Style Screen Translator APK & AAB
         run: |
           gradle assembleRelease bundleRelease --stacktrace
-          cp app/build/outputs/apk/release/*.apk ScreenTranslator-Lens-v4.apk
-          cp app/build/outputs/bundle/release/*.aab ScreenTranslator-Lens-v4.aab
+          cp app/build/outputs/apk/release/*.apk ScreenTranslator-Lens-v5.1.apk
+          cp app/build/outputs/bundle/release/*.aab ScreenTranslator-Lens-v5.1.aab
 
-      - name: Publish Direct Download Release (v4.0)
+      - name: Publish Direct Download Release (v5.0)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.0-lens
-          name: "عدسة مترجم الشاشة الفوري v4.0 (ترجمة موضعية + زر صغير 36dp)"
-          body: "الإصدار الرابع v4.0: زر دائري مصغر (36dp) وترجمة فورية في نفس مكان كل كلمة مثل عدسة جوجل."
+          tag_name: v5.1-lens
+          name: "عدسة مترجم الشاشة الفوري v5.0 (تخصيص الشكل واللون والخط والحجم + إيقاف من الزر العائم)"
+          body: "الإصدار الخامس v5.0: تخصيص كامل لشكل ولون وخط وحجم الترجمة + إيقاف التطبيق بالكامل مباشرة من الزر العائم."
           files: |
-            ScreenTranslator-Lens-v4.apk
-            ScreenTranslator-Lens-v4.aab
+            ScreenTranslator-Lens-v5.1.apk
+            ScreenTranslator-Lens-v5.1.aab
 
-      - name: Upload v4 Signed APK Artifact
+      - name: Upload v5 Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenTranslator-Lens-v4-APK
-          path: ScreenTranslator-Lens-v4.apk
+          name: ScreenTranslator-Lens-v5.1-APK
+          path: ScreenTranslator-Lens-v5.1.apk
 
-      - name: Upload v4 Signed AAB Artifact
+      - name: Upload v5 Signed AAB Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenTranslator-Lens-v4-AAB
-          path: ScreenTranslator-Lens-v4.aab
+          name: ScreenTranslator-Lens-v5.1-AAB
+          path: ScreenTranslator-Lens-v5.1.aab
 
-# Build timestamp: 2026-11-12T16:31:32.280Z
+# Build timestamp: 2026-11-14T16:17:38.412Z
