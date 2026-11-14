@@ -67,18 +67,24 @@
       color: #fca5a5;
       border-color: rgba(239, 68, 68, 0.45);
     }
+    html, body {
+      width: 100%;
+      min-height: 100%;
+    }
     .container {
-      padding: 14px;
-      padding-left: 56px;
+      width: 100%;
+      max-width: 100%;
+      padding: 12px 10px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      max-width: 560px;
-      margin: 0 auto;
+      gap: 12px;
+      margin: 0;
     }
-    @media (min-width: 680px) {
+    @media (min-width: 768px) {
       .container {
-        padding-left: 14px;
+        max-width: 640px;
+        padding: 16px;
+        margin: 0 auto;
       }
     }
     .card {
@@ -397,13 +403,14 @@
     /* Real Interactive Floating Capsule Simulator (Matches Android FloatingTranslatorService v5 100%) */
     .floating-capsule-sim {
       position: fixed;
-      left: 8px;
-      top: 34%;
+      left: 6px;
+      top: 38%;
       z-index: 160;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
+      opacity: 0.9;
       user-select: none;
       touch-action: none;
     }
@@ -1435,8 +1442,11 @@
         out.push({ id: r.id, role: r.role, lang: r.lang, orig: r.orig, translated: trans });
       }
       currentItems = out;
-      if (out.length > 0 && livePreviewTranslatedSample) {
-        livePreviewTranslatedSample.textContent = out[0].translated;
+      const previewSample = out.length > 1 ? out[1] : out[0];
+      if (previewSample && livePreviewTranslatedSample) {
+        const capEl = document.getElementById("livePreviewOrigCaption");
+        if (capEl) capEl.textContent = previewSample.orig;
+        livePreviewTranslatedSample.textContent = previewSample.translated;
       }
       renderItems();
     }
