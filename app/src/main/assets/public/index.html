@@ -600,7 +600,7 @@
 
       <button id="startLiveScreenBtn" type="button" class="btn btn-floating-start">
         <span>●</span>
-        <span id="liveCaptureBtnLabel">تشغيل عدسة الترجمة العائمة (v5.0)</span>
+        <span id="liveCaptureBtnLabel">تشغيل عدسة الترجمة العائمة فوق التطبيقات</span>
       </button>
 
       <div class="actions-row">
@@ -781,7 +781,7 @@
         <span style="color: #6ee7b7;">🚀 تحديث وبناء ملف الـ APK الجديد (v5.0) على GitHub</span>
       </div>
       <p style="font-size: 12px; color: #cbd5e1;">
-        لتوليد ملف <code>ScreenTranslator-Lens-v5.1.apk</code> و<code>AAB</code> بالميزات الجديدة (تخصيص الشكل واللون والخط والحجم + إيقاف التطبيق من الزر العائم)، الصقي كود <code>ghp_</code> واضغطي زر البناء:
+        لتوليد ملف <code>ScreenTranslator-Lens-v5.0.apk</code> و<code>AAB</code> بالميزات الجديدة (تخصيص الشكل واللون والخط والحجم + إيقاف التطبيق من الزر العائم)، الصقي كود <code>ghp_</code> واضغطي زر البناء:
       </p>
 
       <button id="openOrCopyTokenUrlBtn" type="button" class="btn btn-secondary">
@@ -1838,20 +1838,20 @@
 
         clearTimeout(activePollTimer);
         if (latestRun.conclusion === "success") {
-          const directApkReleaseUrl = `https://github.com/${owner}/${repoName}/releases/download/v5.1-lens/ScreenTranslator-Lens-v5.1.apk`;
-          const relCheck = await fetch(`https://api.github.com/repos/${owner}/${repoName}/releases/tags/v5.1-lens`, { headers });
+          const directApkReleaseUrl = `https://github.com/${owner}/${repoName}/releases/download/v5.0-lens/ScreenTranslator-Lens-v5.0.apk`;
+          const relCheck = await fetch(`https://api.github.com/repos/${owner}/${repoName}/releases/tags/v5.0-lens`, { headers });
           artifactsDownloadButtonsList.innerHTML = "";
 
           if (relCheck.ok) {
             liveWorkflowTitle.textContent = "✅ ملف الـ APK الجديد (v5.0) جاهز برابط تحميل مباشر!";
-            liveWorkflowDetail.innerHTML = `اضغطي الزر الأخضر بالأسفل لنسخ الرابط المباشر، ثم افتحي <strong>Google Chrome</strong> والصقيه في الأعلى ليبدأ تنزيل <code>ScreenTranslator-Lens-v5.1.apk</code> فوراً!`;
+            liveWorkflowDetail.innerHTML = `اضغطي الزر الأخضر بالأسفل لنسخ الرابط المباشر، ثم افتحي <strong>Google Chrome</strong> والصقيه في الأعلى ليبدأ تنزيل <code>ScreenTranslator-Lens-v5.0.apk</code> فوراً!`;
             generatedActionsUrlInput.value = directApkReleaseUrl;
             copyTextToClipboard(directApkReleaseUrl);
 
             const copyDirectApkBtn = document.createElement("button");
             copyDirectApkBtn.type = "button";
             copyDirectApkBtn.className = "btn btn-emerald";
-            copyDirectApkBtn.textContent = "📋 نسخ الرابط المباشر لتنزيل ScreenTranslator-Lens-v5.1.apk";
+            copyDirectApkBtn.textContent = "📋 نسخ الرابط المباشر لتنزيل ScreenTranslator-Lens-v5.0.apk";
             copyDirectApkBtn.addEventListener("click", () => {
               generatedActionsUrlInput.value = directApkReleaseUrl;
               copyTextToClipboard(directApkReleaseUrl);
@@ -1860,7 +1860,7 @@
             artifactsDownloadButtonsList.appendChild(copyDirectApkBtn);
           } else {
             liveWorkflowTitle.textContent = "✅ اكتمل بناء الإصدار الخامس v5.0 بنجاح!";
-            liveWorkflowDetail.innerHTML = `اضغطي الزر الأخضر لنسخ رابط صفحة البناء، ثم افتحي <strong>Google Chrome</strong> وانزلي لآخر الصفحة واضغطي على <strong>ScreenTranslator-Lens-v5.1-APK</strong>!`;
+            liveWorkflowDetail.innerHTML = `اضغطي الزر الأخضر لنسخ رابط صفحة البناء، ثم افتحي <strong>Google Chrome</strong> وانزلي لآخر الصفحة واضغطي على <strong>ScreenTranslator-Lens-v5.0-APK</strong>!`;
             generatedActionsUrlInput.value = runHtmlUrl;
             copyTextToClipboard(runHtmlUrl);
 
@@ -2020,6 +2020,7 @@
     });
 
     window.addEventListener("DOMContentLoaded", () => {
+      if (window.AndroidBridge) { floatingCapsuleSim.classList.add("hidden"); const ghCard = document.getElementById("githubPatInput"); if (ghCard && ghCard.closest("section")) ghCard.closest("section").classList.add("hidden"); }
       if (window.AndroidBridge && window.AndroidBridge.getTranslationStyleJson) {
         try {
           const nativeJson = window.AndroidBridge.getTranslationStyleJson();
