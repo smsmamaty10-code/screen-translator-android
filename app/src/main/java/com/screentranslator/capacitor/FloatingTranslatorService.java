@@ -136,34 +136,43 @@ public class FloatingTranslatorService extends Service {
         screenWidth = dm.widthPixels;
         screenHeight = dm.heightPixels;
         screenDensity = dm.densityDpi;
-
-        startForegroundWithNotification();
-        createFullScreenLensOverlay();
-        createFloatingQuickMenu();
-        createCompactFloatingBubble();
     }
+
+    private boolean viewsInitialized = false;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null) {
-            if (ACTION_STOP_ENTIRE_APP.equals(intent.getAction())) {
-                shutdownEntireApplication();
-                return START_NOT_STICKY;
-            }
-            int resultCode = intent.getIntExtra("resultCode", Activity.RESULT_CANCELED);
-            Intent resultData = intent.getParcelableExtra("resultData");
-            String src = intent.getStringExtra("sourceLang");
-            String tgt = intent.getStringExtra("targetLang");
-            if (src != null) currentSourceLang = src;
-            if (tgt != null) currentTargetLang = tgt;
-
-            applyReloadedStyle(this);
-
-            if (resultData != null && mediaProjection == null) {
-                setupMediaProjection(resultCode, resultData);
-            }
+        if (intent == null) {
+            stopSelf();
+            return START_NOT_STICKY;
         }
-        return START_STICKY;
+        if (ACTION_STOP_ENTIRE_APP.equals(intent.getAction())) {
+            shutdownEntireApplication();
+            return START_NOT_STICKY;
+        }
+        int resultCode = intent.getIntExtra("resultCode", Activity.RESULT_CANCELED);
+        Intent resultData = intent.getParcelableExtra("resultData");
+        String src = intent.getStringExtra("sourceLang");
+        String tgt = intent.getStringExtra("targetLang");
+        if (src != null) currentSourceLang = src;
+        if (tgt != null) currentTargetLang = tgt;
+
+        // Android 14/15 requires startForeground(MEDIA_PROJECTION) ONLY after resultData is verified!
+        startForegroundWithNotification();
+
+        if (!viewsInitialized) {
+            viewsInitialized = true;
+            createFullScreenLensOverlay();
+            createFloatingQuickMenu();
+            createCompactFloatingBubble();
+        }
+
+        applyReloadedStyle(this);
+
+        if (resultCode == Activity.RESULT_OK && resultData != null && mediaProjection == null) {
+            setupMediaProjection(resultCode, resultData);
+        }
+        return START_NOT_STICKY;
     }
 
     private void applyReloadedStyle(Context ctx) {
@@ -307,7 +316,7 @@ public class FloatingTranslatorService extends Service {
             FrameLayout.LayoutParams.WRAP_CONTENT
         );
         barLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        barLp.bottomMargin = dp(34);
+        barLp.bottomMargin = dp(52);
         fullScreenOverlayContainer.addView(bottomBar, barLp);
 
         int overlayType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
@@ -319,8 +328,7 @@ public class FloatingTranslatorService extends Service {
             WindowManager.LayoutParams.MATCH_PARENT,
             overlayType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         );
         lp.gravity = Gravity.TOP | Gravity.START;
@@ -557,7 +565,7 @@ public class FloatingTranslatorService extends Service {
      * 2) الزر السفلي المدمج (✕⚙): ضغطة واحدة تفتح قائمة التحكم السريع وإيقاف التطبيق بالكامل!
      */
     private void createCompactFloatingBubble() {
-        final int bubbleW = dp(38);
+        final int bubbleW = dp(44);
         miniBubbleContainer = new LinearLayout(this);
         miniBubbleContainer.setOrientation(LinearLayout.VERTICAL);
         miniBubbleContainer.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -596,7 +604,7 @@ public class FloatingTranslatorService extends Service {
             FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
-        LinearLayout.LayoutParams circleLp = new LinearLayout.LayoutParams(dp(36), dp(36));
+        LinearLayout.LayoutParams circleLp = new LinearLayout.LayoutParams(dp(42), dp(42));
         miniBubbleContainer.addView(mainCircle, circleLp);
 
         // Part 2: Attached Mini Stop & Quick-Settings Pill right below (36dp x 22dp)
@@ -608,7 +616,7 @@ public class FloatingTranslatorService extends Service {
         stopAndMenuPill.setGravity(Gravity.CENTER);
         stopAndMenuPill.setBackground(makeRoundedBg("#EB0F172A", "#EF4444", 10, 1));
 
-        LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(dp(36), dp(22));
+        LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(dp(42), dp(25));
         pillLp.topMargin = dp(3);
         miniBubbleContainer.addView(stopAndMenuPill, pillLp);
 
@@ -645,13 +653,20 @@ public class FloatingTranslatorService extends Service {
             private final Runnable longPressRunnable = () -> {
                 if (!moved && !longPressTriggered) {
                     longPressTriggered = true;
-                    shutdownEntireApplication();
+                    vibrateLight();
+                    showQuickMenuNearBubble();
                 }
             };
 
+            private void vibrateLight() {
+                if (miniBubbleContainer != null) {
+                    miniBubbleContainer.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                }
+            }
+
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
+                switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         initX = bubbleLayoutParams.x;
                         initY = bubbleLayoutParams.y;
@@ -661,27 +676,33 @@ public class FloatingTranslatorService extends Service {
                         moved = false;
                         longPressTriggered = false;
                         miniBubbleContainer.setAlpha(1.0f);
-                        mainHandler.postDelayed(longPressRunnable, 680);
+                        v.setScaleX(0.92f);
+                        v.setScaleY(0.92f);
+                        mainHandler.postDelayed(longPressRunnable, 850);
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
                         float dx = event.getRawX() - downRawX;
                         float dy = event.getRawY() - downRawY;
-                        if (Math.hypot(dx, dy) > dp(12)) {
+                        if (Math.hypot(dx, dy) > dp(16)) {
                             moved = true;
+                            v.setScaleX(1.0f);
+                            v.setScaleY(1.0f);
                             mainHandler.removeCallbacks(longPressRunnable);
                             hideQuickMenu();
                             bubbleLayoutParams.x = Math.max(0, Math.min(screenWidth - bubbleW, initX + (int) dx));
-                            bubbleLayoutParams.y = Math.max(dp(24), Math.min(screenHeight - dp(80), initY + (int) dy));
+                            bubbleLayoutParams.y = Math.max(dp(24), Math.min(screenHeight - dp(85), initY + (int) dy));
                             windowManager.updateViewLayout(miniBubbleContainer, bubbleLayoutParams);
                         }
                         return true;
 
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
+                        v.setScaleX(1.0f);
+                        v.setScaleY(1.0f);
                         mainHandler.removeCallbacks(longPressRunnable);
                         if (longPressTriggered) return true;
-                        if (!moved && (System.currentTimeMillis() - downTime) < 680) {
+                        if (event.getActionMasked() == MotionEvent.ACTION_UP && !moved) {
                             if (isTranslatePart) {
                                 hideQuickMenu();
                                 if (overlayShowing) {
