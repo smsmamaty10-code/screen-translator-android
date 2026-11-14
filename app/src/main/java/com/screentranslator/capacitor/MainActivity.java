@@ -215,7 +215,13 @@ public class MainActivity extends Activity {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
                 requestMediaProjection();
             } else {
-                Toast.makeText(this, "لم يتم منح إذن الظهور فوق التطبيقات", Toast.LENGTH_SHORT).show();
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(MainActivity.this)) {
+                        requestMediaProjection();
+                    } else {
+                        Toast.makeText(MainActivity.this, "يرجى تفعيل مفتاح السماح بالظهور فوق التطبيقات", Toast.LENGTH_LONG).show();
+                    }
+                }, 400);
             }
         } else if (requestCode == REQ_MEDIA_PROJECTION) {
             if (resultCode == Activity.RESULT_OK && data != null) {
