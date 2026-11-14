@@ -157,6 +157,16 @@ public class FloatingTranslatorService extends Service {
         if (src != null) currentSourceLang = src;
         if (tgt != null) currentTargetLang = tgt;
 
+        if (mediaProjection == null && (resultCode != Activity.RESULT_OK || resultData == null)) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "يرجى تفعيل إذن الظهور فوق التطبيقات أولاً", Toast.LENGTH_SHORT).show();
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         // Android 14/15 requires startForeground(MEDIA_PROJECTION) ONLY after resultData is verified!
         startForegroundWithNotification();
 
@@ -565,7 +575,7 @@ public class FloatingTranslatorService extends Service {
      * 2) الزر السفلي المدمج (✕⚙): ضغطة واحدة تفتح قائمة التحكم السريع وإيقاف التطبيق بالكامل!
      */
     private void createCompactFloatingBubble() {
-        final int bubbleW = dp(44);
+        final int bubbleW = dp(38);
         miniBubbleContainer = new LinearLayout(this);
         miniBubbleContainer.setOrientation(LinearLayout.VERTICAL);
         miniBubbleContainer.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -604,7 +614,7 @@ public class FloatingTranslatorService extends Service {
             FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
-        LinearLayout.LayoutParams circleLp = new LinearLayout.LayoutParams(dp(42), dp(42));
+        LinearLayout.LayoutParams circleLp = new LinearLayout.LayoutParams(dp(36), dp(36));
         miniBubbleContainer.addView(mainCircle, circleLp);
 
         // Part 2: Attached Mini Stop & Quick-Settings Pill right below (36dp x 22dp)
@@ -616,7 +626,7 @@ public class FloatingTranslatorService extends Service {
         stopAndMenuPill.setGravity(Gravity.CENTER);
         stopAndMenuPill.setBackground(makeRoundedBg("#EB0F172A", "#EF4444", 10, 1));
 
-        LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(dp(42), dp(25));
+        LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(dp(36), dp(20));
         pillLp.topMargin = dp(3);
         miniBubbleContainer.addView(stopAndMenuPill, pillLp);
 
