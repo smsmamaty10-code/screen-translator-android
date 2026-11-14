@@ -19,6 +19,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
+import org.json.JSONObject;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
@@ -33,6 +34,22 @@ public class MainActivity extends Activity {
     private TextToSpeech tts;
     private String pendingSourceLang = "auto";
     private String pendingTargetLang = "ar";
+
+    public static void closeEntireApp() {
+        if (instance != null) {
+            instance.runOnUiThread(() -> {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        instance.finishAndRemoveTask();
+                    } else {
+                        instance.finishAffinity();
+                    }
+                } catch (Exception e) {
+                    instance.finish();
+                }
+            });
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -53,7 +70,14 @@ public class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                TranslationStyleConfig cfg = TranslationStyleConfig.load(MainActivity.this);
+                notifyStyleChangedFromService(cfg.toJsonString());
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> callback, FileChooserParams params) {
@@ -70,6 +94,22 @@ public class MainActivity extends Activity {
         });
 
         webView.loadUrl("file:///android_asset/public/index.html");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        TranslationStyleConfig cfg = TranslationStyleConfig.load(this);
+        notifyStyleChangedFromService(cfg.toJsonString());
+    }
+
+    public void notifyStyleChangedFromService(final String styleJson) {
+        runOnUiThread(() -> {
+            if (webView != null && styleJson != null) {
+                String quoted = JSONObject.quote(styleJson);
+                webView.evaluateJavascript("if(window.onNativeStyleSynced){window.onNativeStyleSynced(" + quoted + ");}", null);
+            }
+        });
     }
 
     public void deliverCapturedScreenToWebView(final String base64DataUrl) {
@@ -98,10 +138,31 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void closeEntireAppFromWeb() {
+            runOnUiThread(() -> {
+                Intent stopIntent = new Intent(MainActivity.this, FloatingTranslatorService.class);
+                stopService(stopIntent);
+                Toast.makeText(MainActivity.this, "تم إيقاف التطبيق بالكامل", Toast.LENGTH_SHORT).show();
+                closeEntireApp();
+            });
+        }
+
+        @JavascriptInterface
         public void updateLanguages(String sourceLang, String targetLang) {
             pendingSourceLang = sourceLang != null ? sourceLang : "auto";
             pendingTargetLang = targetLang != null ? targetLang : "ar";
             FloatingTranslatorService.updateLanguages(pendingSourceLang, pendingTargetLang);
+        }
+
+        @JavascriptInterface
+        public void updateTranslationStyle(String styleJson) {
+            TranslationStyleConfig.fromJsonAndSave(MainActivity.this, styleJson);
+            FloatingTranslatorService.reloadStyleFromPrefs(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public String getTranslationStyleJson() {
+            return TranslationStyleConfig.load(MainActivity.this).toJsonString();
         }
 
         @JavascriptInterface
@@ -168,7 +229,7 @@ public class MainActivity extends Activity {
                 } else {
                     startService(serviceIntent);
                 }
-                Toast.makeText(this, "بدأ الزر العائم! افتح أي تطبيق واضغط (ترجم الشاشة)", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "بدأ الزر العائم v5! اضغط (تر) للترجمة أو (✕⚙) للتخصيص وإيقاف التطبيق", Toast.LENGTH_LONG).show();
                 moveTaskToBack(true);
             } else {
                 Toast.makeText(this, "تم إلغاء إذن التقاط الشاشة", Toast.LENGTH_SHORT).show();
@@ -196,6 +257,9 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (instance == this) {
+            instance = null;
+        }
         if (tts != null) {
             tts.shutdown();
         }
