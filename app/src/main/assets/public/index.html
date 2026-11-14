@@ -781,7 +781,7 @@
         <span style="color: #6ee7b7;">🚀 تحديث وبناء ملف الـ APK الجديد (v5.0) على GitHub</span>
       </div>
       <p style="font-size: 12px; color: #cbd5e1;">
-        لتوليد ملف <code>ScreenTranslator-Lens-v5.apk</code> و<code>AAB</code> بالميزات الجديدة (تخصيص الشكل واللون والخط والحجم + إيقاف التطبيق من الزر العائم)، الصقي كود <code>ghp_</code> واضغطي زر البناء:
+        لتوليد ملف <code>ScreenTranslator-Lens-v5.1.apk</code> و<code>AAB</code> بالميزات الجديدة (تخصيص الشكل واللون والخط والحجم + إيقاف التطبيق من الزر العائم)، الصقي كود <code>ghp_</code> واضغطي زر البناء:
       </p>
 
       <button id="openOrCopyTokenUrlBtn" type="button" class="btn btn-secondary">
@@ -1206,82 +1206,162 @@
       showToast("تمت استعادة إعدادات المظهر الافتراضية");
     });
 
-    // Floating Capsule Dragging + Quick Menu + Stop Entire App
+    function openLensOverlayPreviewModal() {
+      let modal = document.getElementById("lensFullScreenModalSim");
+      if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "lensFullScreenModalSim";
+        modal.style.cssText = "position:fixed;inset:0;z-index:185;background:rgba(6,11,22,0.82);backdrop-filter:blur(3px);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:16px;gap:12px;";
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = "";
+      const headerChip = document.createElement("div");
+      headerChip.style.cssText = "font-size:12px;font-weight:800;color:#7dd3fc;background:#0f172a;border:1px solid #38bdf8;padding:5px 14px;border-radius:999px;";
+      headerChip.textContent = "🔍 طبقة عدسة الترجمة الفورية فوق الشاشة";
+      modal.appendChild(headerChip);
+
+      const boxesWrap = document.createElement("div");
+      boxesWrap.style.cssText = "width:100%;max-width:480px;display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow-y:auto;padding:6px;";
+      currentItems.forEach((it) => {
+        const b = document.createElement("div");
+        b.dir = "auto";
+        b.textContent = it.translated;
+        applyStyleToElement(b);
+        b.style.width = "100%";
+        b.style.textAlign = "center";
+        boxesWrap.appendChild(b);
+      });
+      modal.appendChild(boxesWrap);
+
+      const bottomBar = document.createElement("div");
+      bottomBar.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;justify-content:center;background:#0f172a;border:1.5px solid #38bdf8;border-radius:999px;padding:7px 12px;margin-top:6px;";
+
+      const hideBtn = document.createElement("button");
+      hideBtn.type = "button";
+      hideBtn.className = "mini-btn";
+      hideBtn.textContent = "✕ إخفاء الترجمة";
+      hideBtn.addEventListener("click", () => modal.classList.add("hidden"));
+
+      const styleBtn = document.createElement("button");
+      styleBtn.type = "button";
+      styleBtn.className = "mini-btn";
+      styleBtn.style.color = "#7dd3fc";
+      styleBtn.textContent = "🎨 تغيير المظهر";
+      styleBtn.addEventListener("click", () => {
+        modal.classList.add("hidden");
+        toggleFloatingQuickMenuPopup();
+      });
+
+      const stopBtn = document.createElement("button");
+      stopBtn.type = "button";
+      stopBtn.className = "mini-btn";
+      stopBtn.style.cssText = "background:#dc2626;color:#fff;border:none;";
+      stopBtn.textContent = "🔴 إيقاف التطبيق";
+      stopBtn.addEventListener("click", () => {
+        modal.classList.add("hidden");
+        stopEntireApplicationAction();
+      });
+
+      bottomBar.appendChild(hideBtn);
+      bottomBar.appendChild(styleBtn);
+      bottomBar.appendChild(stopBtn);
+      modal.appendChild(bottomBar);
+      modal.onclick = (ev) => { if (ev.target === modal) modal.classList.add("hidden"); };
+      modal.classList.remove("hidden");
+    }
+
+    function toggleFloatingQuickMenuPopup() {
+      const isHidden = floatingQuickMenuSim.classList.contains("hidden");
+      if (isHidden) {
+        const r = floatingCapsuleSim.getBoundingClientRect();
+        const menuW = 236;
+        const leftPos = (r.left > window.innerWidth / 2)
+          ? Math.max(8, r.left - menuW - 8)
+          : Math.min(window.innerWidth - menuW - 8, r.right + 8);
+        const topPos = Math.max(60, Math.min(window.innerHeight - 340, r.top - 10));
+        floatingQuickMenuSim.style.left = `${leftPos}px`;
+        floatingQuickMenuSim.style.top = `${topPos}px`;
+        floatingQuickMenuSim.classList.remove("hidden");
+      } else {
+        floatingQuickMenuSim.classList.add("hidden");
+      }
+    }
+
+    // Bulletproof Touch + Pointer Drag & Instant Tap Handler
     (function setupFloatingCapsuleInteractions() {
-      let dragging = false;
-      let startX = 0, startY = 0, origLeft = 8, origTop = 220;
+      function bindButtonWithDrag(btnEl, onCleanTap) {
+        let activePtr = null;
+        let startX = 0, startY = 0, origLeft = 6, origTop = 220;
+        let hasDragged = false;
+        let lastTapTime = 0;
 
-      function startDrag(e) {
-        const pt = e.touches ? e.touches[0] : e;
-        startX = pt.clientX;
-        startY = pt.clientY;
-        const rect = floatingCapsuleSim.getBoundingClientRect();
-        origLeft = rect.left;
-        origTop = rect.top;
-        dragging = false;
+        function fireTapOnce() {
+          const now = Date.now();
+          if (now - lastTapTime < 220) return;
+          lastTapTime = now;
+          onCleanTap();
+        }
 
-        function onMove(ev) {
-          const p = ev.touches ? ev.touches[0] : ev;
-          const dx = p.clientX - startX;
-          const dy = p.clientY - startY;
-          if (Math.hypot(dx, dy) > 8) {
-            dragging = true;
+        btnEl.addEventListener("pointerdown", (e) => {
+          activePtr = e.pointerId;
+          startX = e.clientX;
+          startY = e.clientY;
+          const rect = floatingCapsuleSim.getBoundingClientRect();
+          origLeft = rect.left;
+          origTop = rect.top;
+          hasDragged = false;
+        });
+
+        window.addEventListener("pointermove", (e) => {
+          if (activePtr !== e.pointerId) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          if (Math.hypot(dx, dy) > 16) {
+            hasDragged = true;
             floatingQuickMenuSim.classList.add("hidden");
-            const nx = Math.max(6, Math.min(window.innerWidth - 46, origLeft + dx));
-            const ny = Math.max(58, Math.min(window.innerHeight - 80, origTop + dy));
+            const nx = Math.max(6, Math.min(window.innerWidth - 48, origLeft + dx));
+            const ny = Math.max(58, Math.min(window.innerHeight - 85, origTop + dy));
             floatingCapsuleSim.style.left = `${nx}px`;
             floatingCapsuleSim.style.right = "auto";
             floatingCapsuleSim.style.top = `${ny}px`;
           }
-        }
+        });
 
-        function onEnd() {
-          window.removeEventListener("mousemove", onMove);
-          window.removeEventListener("mouseup", onEnd);
-          window.removeEventListener("touchmove", onMove);
-          window.removeEventListener("touchend", onEnd);
-          if (dragging) {
+        window.addEventListener("pointerup", (e) => {
+          if (activePtr !== e.pointerId) return;
+          activePtr = null;
+          if (hasDragged) {
             const rectNow = floatingCapsuleSim.getBoundingClientRect();
-            const snapLeft = (rectNow.left + 19 < window.innerWidth / 2) ? 8 : (window.innerWidth - 46);
+            const snapLeft = (rectNow.left + 21 < window.innerWidth / 2) ? 6 : (window.innerWidth - 46);
             floatingCapsuleSim.style.left = `${snapLeft}px`;
+            setTimeout(() => { hasDragged = false; }, 120);
+          } else {
+            fireTapOnce();
           }
-        }
+        });
 
-        window.addEventListener("mousemove", onMove);
-        window.addEventListener("mouseup", onEnd);
-        window.addEventListener("touchmove", onMove, { passive: true });
-        window.addEventListener("touchend", onEnd);
+        window.addEventListener("pointercancel", (e) => {
+          if (activePtr === e.pointerId) {
+            activePtr = null;
+            hasDragged = false;
+          }
+        });
+
+        btnEl.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!hasDragged) fireTapOnce();
+        });
       }
 
-      floatingCircleMainBtn.addEventListener("mousedown", startDrag);
-      floatingCircleMainBtn.addEventListener("touchstart", startDrag, { passive: true });
-      floatingCircleMenuBtn.addEventListener("mousedown", startDrag);
-      floatingCircleMenuBtn.addEventListener("touchstart", startDrag, { passive: true });
-
-      floatingCircleMainBtn.addEventListener("click", () => {
-        if (dragging) return;
+      bindButtonWithDrag(floatingCircleMainBtn, () => {
         floatingQuickMenuSim.classList.add("hidden");
         showTranslated = true;
         renderItems();
-        showToast("⚡ تمت ترجمة الشاشة فوراً بمظهرك المخصص!");
+        openLensOverlayPreviewModal();
       });
 
-      floatingCircleMenuBtn.addEventListener("click", () => {
-        if (dragging) return;
-        const isHidden = floatingQuickMenuSim.classList.contains("hidden");
-        if (isHidden) {
-          const r = floatingCapsuleSim.getBoundingClientRect();
-          const menuW = 236;
-          const leftPos = (r.left > window.innerWidth / 2)
-            ? Math.max(8, r.left - menuW - 8)
-            : Math.min(window.innerWidth - menuW - 8, r.right + 8);
-          const topPos = Math.max(60, Math.min(window.innerHeight - 330, r.top - 10));
-          floatingQuickMenuSim.style.left = `${leftPos}px`;
-          floatingQuickMenuSim.style.top = `${topPos}px`;
-          floatingQuickMenuSim.classList.remove("hidden");
-        } else {
-          floatingQuickMenuSim.classList.add("hidden");
-        }
+      bindButtonWithDrag(floatingCircleMenuBtn, () => {
+        toggleFloatingQuickMenuPopup();
       });
     })();
 
@@ -1293,7 +1373,7 @@
       floatingQuickMenuSim.classList.add("hidden");
       showTranslated = true;
       renderItems();
-      showToast("⚡ تمت ترجمة الشاشة فوراً!");
+      openLensOverlayPreviewModal();
     });
 
     quickMenuSizeMinusBtn.addEventListener("click", () => {
@@ -1758,20 +1838,20 @@
 
         clearTimeout(activePollTimer);
         if (latestRun.conclusion === "success") {
-          const directApkReleaseUrl = `https://github.com/${owner}/${repoName}/releases/download/v5.0-lens/ScreenTranslator-Lens-v5.apk`;
-          const relCheck = await fetch(`https://api.github.com/repos/${owner}/${repoName}/releases/tags/v5.0-lens`, { headers });
+          const directApkReleaseUrl = `https://github.com/${owner}/${repoName}/releases/download/v5.1-lens/ScreenTranslator-Lens-v5.1.apk`;
+          const relCheck = await fetch(`https://api.github.com/repos/${owner}/${repoName}/releases/tags/v5.1-lens`, { headers });
           artifactsDownloadButtonsList.innerHTML = "";
 
           if (relCheck.ok) {
             liveWorkflowTitle.textContent = "✅ ملف الـ APK الجديد (v5.0) جاهز برابط تحميل مباشر!";
-            liveWorkflowDetail.innerHTML = `اضغطي الزر الأخضر بالأسفل لنسخ الرابط المباشر، ثم افتحي <strong>Google Chrome</strong> والصقيه في الأعلى ليبدأ تنزيل <code>ScreenTranslator-Lens-v5.apk</code> فوراً!`;
+            liveWorkflowDetail.innerHTML = `اضغطي الزر الأخضر بالأسفل لنسخ الرابط المباشر، ثم افتحي <strong>Google Chrome</strong> والصقيه في الأعلى ليبدأ تنزيل <code>ScreenTranslator-Lens-v5.1.apk</code> فوراً!`;
             generatedActionsUrlInput.value = directApkReleaseUrl;
             copyTextToClipboard(directApkReleaseUrl);
 
             const copyDirectApkBtn = document.createElement("button");
             copyDirectApkBtn.type = "button";
             copyDirectApkBtn.className = "btn btn-emerald";
-            copyDirectApkBtn.textContent = "📋 نسخ الرابط المباشر لتنزيل ScreenTranslator-Lens-v5.apk";
+            copyDirectApkBtn.textContent = "📋 نسخ الرابط المباشر لتنزيل ScreenTranslator-Lens-v5.1.apk";
             copyDirectApkBtn.addEventListener("click", () => {
               generatedActionsUrlInput.value = directApkReleaseUrl;
               copyTextToClipboard(directApkReleaseUrl);
@@ -1780,7 +1860,7 @@
             artifactsDownloadButtonsList.appendChild(copyDirectApkBtn);
           } else {
             liveWorkflowTitle.textContent = "✅ اكتمل بناء الإصدار الخامس v5.0 بنجاح!";
-            liveWorkflowDetail.innerHTML = `اضغطي الزر الأخضر لنسخ رابط صفحة البناء، ثم افتحي <strong>Google Chrome</strong> وانزلي لآخر الصفحة واضغطي على <strong>ScreenTranslator-Lens-v5-APK</strong>!`;
+            liveWorkflowDetail.innerHTML = `اضغطي الزر الأخضر لنسخ رابط صفحة البناء، ثم افتحي <strong>Google Chrome</strong> وانزلي لآخر الصفحة واضغطي على <strong>ScreenTranslator-Lens-v5.1-APK</strong>!`;
             generatedActionsUrlInput.value = runHtmlUrl;
             copyTextToClipboard(runHtmlUrl);
 
