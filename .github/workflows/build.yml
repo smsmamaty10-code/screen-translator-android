@@ -1,4 +1,4 @@
-name: Build v5 Custom-Style Lens APK and AAB
+name: Build Real Google-Lens v5.0 APK and AAB
 
 on:
   push:
@@ -44,32 +44,32 @@ jobs:
         with:
           gradle-version: '8.5'
 
-      - name: Build v5.0 Lens-Style Screen Translator APK & AAB
+      - name: Build Signed v5.0 Lens Screen Translator APK & AAB
         run: |
           gradle assembleRelease bundleRelease --stacktrace
-          cp app/build/outputs/apk/release/*.apk ScreenTranslator-Lens-v5.1.apk
-          cp app/build/outputs/bundle/release/*.aab ScreenTranslator-Lens-v5.1.aab
+          cp app/build/outputs/apk/release/*.apk ScreenTranslator-Lens-v5.0.apk
+          cp app/build/outputs/bundle/release/*.aab ScreenTranslator-Lens-v5.0.aab
 
-      - name: Publish Direct Download Release (v5.0)
+      - name: Publish Direct Download Release (v5.0-lens)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v5.1-lens
-          name: "عدسة مترجم الشاشة الفوري v5.0 (تخصيص الشكل واللون والخط والحجم + إيقاف من الزر العائم)"
-          body: "الإصدار الخامس v5.0: تخصيص كامل لشكل ولون وخط وحجم الترجمة + إيقاف التطبيق بالكامل مباشرة من الزر العائم."
+          tag_name: v5.0-lens
+          name: "عدسة مترجم الشاشة الفوري v5.0 (الزر العائم الصغير + ترجمة عدسة جوجل + التخصيص والإيقاف)"
+          body: "الإصدار الخامس الأصلي المبني بمكتبات Google ML Kit: زر عائم دائري صغير (36dp) + ترجمة موضعية مطابقة لعدسة جوجل + تخصيص الشكل واللون والخط والحجم + إيقاف كامل للتطبيق من الزر العائم."
           files: |
-            ScreenTranslator-Lens-v5.1.apk
-            ScreenTranslator-Lens-v5.1.aab
+            ScreenTranslator-Lens-v5.0.apk
+            ScreenTranslator-Lens-v5.0.aab
 
-      - name: Upload v5 Signed APK Artifact
+      - name: Upload v5.0 Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenTranslator-Lens-v5.1-APK
-          path: ScreenTranslator-Lens-v5.1.apk
+          name: ScreenTranslator-Lens-v5.0-APK
+          path: ScreenTranslator-Lens-v5.0.apk
 
-      - name: Upload v5 Signed AAB Artifact
+      - name: Upload v5.0 Signed AAB Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenTranslator-Lens-v5.1-AAB
-          path: ScreenTranslator-Lens-v5.1.aab
+          name: ScreenTranslator-Lens-v5.0-AAB
+          path: ScreenTranslator-Lens-v5.0.aab
 
-# Build timestamp: 2026-11-14T16:17:38.412Z
+# Build timestamp: 2026-11-14T16:35:36.982Z
